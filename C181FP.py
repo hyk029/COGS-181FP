@@ -1,18 +1,3 @@
-# ---
-# jupyter:
-#   jupytext:
-#     text_representation:
-#       extension: .py
-#       format_name: light
-#       format_version: '1.5'
-#       jupytext_version: 1.16.4
-#   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
-#     name: python3
-# ---
-
-#Import necessary packages
 import os
 import argparse
 from typing import Tuple
@@ -25,9 +10,6 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 
-
-# +
-#Architectures
 class CNN(nn.Module):
 
     def __init__(self, num_classes=10, dropout_rate=0.0):
@@ -44,7 +26,6 @@ class CNN(nn.Module):
         x = F.relu(self.conv1(x))
         x = self.pool(F.relu(self.conv2(x)))
         x = F.relu(self.conv3(x))
-        # optional dropout after third conv
         x = self.dropout(x)
 
         x = x.view(x.size(0), -1)  
@@ -62,20 +43,16 @@ def build_resnet18(num_classes=10):
 
 ARCH_MAP = {'cnn': CNN, 'resnet18': build_resnet18}
 
-
-# +
-#Load CIFAR-10 and Tiny ImageNet
 class CIFAR10Loader:
     def __init__(self, batch_size, advanced_augment=False, num_workers=2):
         self.batch_size = batch_size
         self.num_workers = num_workers
         if advanced_augment:
-            # Using RandAugment for advanced data augmentation
             self.train_transform = transforms.Compose([
-                transforms.RandAugment(),  # requires torch>=1.10, torchvision>=0.11
+                transforms.RandAugment(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                     (0.2470, 0.2435, 0.2616))
+                                    (0.2470, 0.2435, 0.2616))
             ])
         else:
             self.train_transform = transforms.Compose([
@@ -83,13 +60,13 @@ class CIFAR10Loader:
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                     (0.2470, 0.2435, 0.2616))
+                                    (0.2470, 0.2435, 0.2616))
             ])
 
         self.test_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465),
-                                 (0.2470, 0.2435, 0.2616))
+                                (0.2470, 0.2435, 0.2616))
         ])
 
     def get_data_loaders(self):
@@ -133,7 +110,7 @@ class TinyImageNetLoader:
                 transforms.RandAugment(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.4802, 0.4481, 0.3975),
-                                     (0.2770, 0.2691, 0.2821))
+                                    (0.2770, 0.2691, 0.2821))
             ])
         else:
             self.train_transform = transforms.Compose([
@@ -141,13 +118,13 @@ class TinyImageNetLoader:
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.4802, 0.4481, 0.3975),
-                                     (0.2770, 0.2691, 0.2821))
+                                    (0.2770, 0.2691, 0.2821))
             ])
 
         self.val_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4802, 0.4481, 0.3975),
-                                 (0.2770, 0.2691, 0.2821))
+                                (0.2770, 0.2691, 0.2821))
         ])
 
     def _make_dataloader(self, folder, transform, shuffle=True):
@@ -162,16 +139,11 @@ class TinyImageNetLoader:
     def get_data_loaders(self):
         train_folder = os.path.join(self.root, 'train')
         val_folder = os.path.join(self.root, 'val')
-        # Make sure val folder is reorganized into subfolders, otherwise you'll need
-        # a custom dataset approach for val_images + val_annotations.
 
         train_loader = self._make_dataloader(train_folder, self.train_transform, shuffle=True)
         val_loader = self._make_dataloader(val_folder, self.val_transform, shuffle=False)
         return train_loader, val_loader
 
-
-# +
-# Training and Evaluating Functions
 def train_one_epoch(model, loader, optimizer, criterion, device):
     model.train()
     running_loss = 0.0
@@ -186,7 +158,6 @@ def train_one_epoch(model, loader, optimizer, criterion, device):
 
         running_loss += loss.item()
     return running_loss / len(loader)
-
 
 def evaluate(model, loader, criterion, device):
     model.eval()
@@ -209,12 +180,9 @@ def evaluate(model, loader, criterion, device):
     
     return avg_loss, accuracy
 
-
-# +
 def main():
     parser = argparse.ArgumentParser()
 
-    # Core arguments
     parser.add_argument('--dataset', type=str, default='cifar10',
                         choices=['cifar10', 'tinyimagenet'],
                         help='Which dataset to train on.')
@@ -237,7 +205,6 @@ def main():
     parser.add_argument('--label_smoothing', type=float, default=0.0,
                         help='Label smoothing parameter (0.0 means no smoothing).')
 
-    # Advanced toggles
     parser.add_argument('--advanced_augment', action='store_true',
                         help='Use RandAugment or standard transforms.')
     parser.add_argument('--use_cosine_scheduler', action='store_true',
@@ -247,7 +214,6 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    # 1. Data Loaders
     if args.dataset == 'cifar10':
         loader_builder = CIFAR10Loader(
             batch_size=args.batch_size,
@@ -264,51 +230,43 @@ def main():
         train_loader, val_loader = loader_builder.get_data_loaders()
         num_classes = 200
 
-    # 2. Model
     if args.arch == 'cnn':
         model = CNN(num_classes=num_classes, dropout_rate=args.dropout_rate)
     else:
         model = build_resnet18(num_classes=num_classes)
     model.to(device)
 
-    # 3. Criterion (CrossEntropy or Label Smoothing)
     if args.label_smoothing > 0:
         criterion = LabelSmoothingCrossEntropy(smoothing=args.label_smoothing)
     else:
         criterion = nn.CrossEntropyLoss()
 
-    # 4. Optimizer
     if args.optimizer == 'adam':
         optimizer = optim.Adam(model.parameters(), lr=args.lr)
     else:
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
 
-    # 5. (Optional) Learning Rate Scheduler
     if args.use_cosine_scheduler:
-        # Cosine annealing over total epochs
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
     else:
         scheduler = None
 
-    # 6. Training Loop
     best_val_acc = 0.0
     for epoch in range(args.epochs):
         train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device)
         val_loss, val_acc = evaluate(model, val_loader, criterion, device)
 
-        # Step the scheduler if used
         if scheduler:
             scheduler.step()
 
-        # Track best accuracy
         if val_acc > best_val_acc:
             best_val_acc = val_acc
 
         print(f"Epoch [{epoch+1}/{args.epochs}] "
-              f"Train Loss: {train_loss:.4f}  "
-              f"Val Loss: {val_loss:.4f}  "
-              f"Val Acc: {val_acc:.2f}%  "
-              f"(Best: {best_val_acc:.2f}%)")
+            f"Train Loss: {train_loss:.4f}  "
+            f"Val Loss: {val_loss:.4f}  "
+            f"Val Acc: {val_acc:.2f}%  "
+            f"(Best: {best_val_acc:.2f}%)")
 
     print("Training Complete")
     print(f"Best Validation Accuracy: {best_val_acc:.2f}%")
@@ -316,6 +274,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-# -
-
 
