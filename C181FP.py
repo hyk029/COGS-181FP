@@ -1,4 +1,4 @@
-#Import necessary packages
+# Import necessary packages
 import os
 import argparse
 from typing import Tuple
@@ -11,8 +11,9 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import pickle
+from torchvision.datasets import ImageFolder
 
-# +
+
 # Smoothing the labels
 class LabelSmoothingCrossEntropy(nn.Module):
     def __init__(self, smoothing=0.1):
@@ -28,8 +29,7 @@ class LabelSmoothingCrossEntropy(nn.Module):
             true_dist.scatter_(1, targets.unsqueeze(1), 1.0 - self.smoothing)
         return torch.mean(torch.sum(-true_dist * log_probs, dim=1))
 
-# +
-#Architectures
+# Architectures
 class SimpleCNN(nn.Module):
     def __init__(self, num_classes=10, dropout_rate=0.3):
         super(SimpleCNN, self).__init__()
@@ -62,10 +62,10 @@ def build_googlenet(num_classes=10):
     model.fc = nn.Linear(1024, num_classes)
     return model
 
-ARCH_MAP = {'simplecnn': SimpleCNN, 'resnet18': build_resnet18, 'googlenet': build_googlenet}
+# ARCH_MAP = {'simplecnn': SimpleCNN, 'resnet18': build_resnet18, 'googlenet': build_googlenet}
 
-# +
-#Load CIFAR-10 and Tiny ImageNet
+
+# Load CIFAR-10 and Tiny ImageNet
 def get_cifar10_loaders(batch_size=128, advanced_augment=True):
     if advanced_augment:
         train_transform = transforms.Compose([
@@ -161,7 +161,6 @@ class TinyImageNetLoader:
         val_loader = self._make_dataloader(val_folder, self.val_transform, shuffle=False)
         return train_loader, val_loader
 
-# +
 # Training and Evaluating Functions
 def train_one_epoch(model, loader, optimizer, criterion, device):
     model.train()
@@ -198,7 +197,6 @@ def evaluate(model, loader, criterion, device):
     accuracy = 100.0 * correct / total
     return avg_loss, accuracy
 
-# +
 #Plots to showcase performance 
 def plot_metrics(epochs, train_losses, val_losses, val_accuracies):
     #Loss Curves
@@ -223,12 +221,12 @@ def plot_metrics(epochs, train_losses, val_losses, val_accuracies):
     plt.savefig("training_curves.png")
     plt.show()
 
-# +
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--arch', type=str, default='resnet18',
-                        choices=['simplecnn', 'resnet18'],
+                        choices=['simplecnn', 'resnet18', 'googlenet'],
                         help='Network architecture')
     parser.add_argument('--epochs', type=int, default=30,
                         help='Number of epochs')
@@ -261,6 +259,8 @@ def main():
     # Models
     if args.arch == 'simplecnn':
         model = SimpleCNN(num_classes=10, dropout_rate=args.dropout_rate)
+    elif args.arch == 'googlenet':
+        model = build_googlenet(num_classes=10)
     else:
         model = build_resnet18(num_classes=10)
     model.to(device)
@@ -293,8 +293,8 @@ def main():
     for epoch in range(args.epochs):
         train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device)
         val_loss, val_acc = evaluate(model, test_loader, criterion, device)
-        if scheduler:
-            scheduler.step()
+        if lrs:
+            lrs.step()
 
         train_losses.append(train_loss)
         val_losses.append(val_loss)
@@ -327,7 +327,8 @@ def main():
 
 if __name__ == '__main__':
     main()
-# -
+
+
 
 
 
