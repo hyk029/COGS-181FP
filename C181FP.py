@@ -10,6 +10,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+import pickle
 
 # +
 # Smoothing the labels
@@ -310,6 +311,19 @@ def main():
     print(f"Best Validation Accuracy: {best_val_acc:.2f}%")
 
     plot_metrics(epoch_list, train_losses, val_losses, val_accuracies)
+
+    results = {
+        'epoch_list': epoch_list,
+        'train_losses': train_losses,
+        'val_losses': val_losses,
+        'val_accuracies': val_accuracies,
+        'best_val_acc': best_val_acc,
+        'model_state_dict': model.state_dict()  
+    }
+    with open("training_results.pkl", "wb") as f:
+        pickle.dump(results, f)
+    print("Training results saved to training_results.pkl")
+
 
 if __name__ == '__main__':
     main()
