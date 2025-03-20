@@ -9,10 +9,10 @@ import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from torchvision.datasets import ImageFolder
+import matplotlib.pyplot as plt
 
 # +
-# Smoothing the labels in order to prevent over confidence
+# Smoothing the labels
 class LabelSmoothingCrossEntropy(nn.Module):
     def __init__(self, smoothing=0.1):
         super().__init__()
@@ -28,7 +28,7 @@ class LabelSmoothingCrossEntropy(nn.Module):
         return torch.mean(torch.sum(-true_dist * log_probs, dim=1))
 
 # +
-#CNN (SimpleCNN) and ResNet18 Architectures 
+#Architectures
 class SimpleCNN(nn.Module):
     def __init__(self, num_classes=10, dropout_rate=0.3):
         super(SimpleCNN, self).__init__()
@@ -51,13 +51,17 @@ class SimpleCNN(nn.Module):
         x = self.fc2(x)
         return x
 
-
 def build_resnet18(num_classes=10):
     model = torchvision.models.resnet18(weights=None)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
     return model
 
-ARCH_MAP = {'simplecnn': SimpleCNN, 'resnet18': build_resnet18,}
+def build_googlenet(num_classes=10):
+    model = torchvision.models.googlenet(weights=None, aux_logits=False)
+    model.fc = nn.Linear(1024, num_classes)
+    return model
+
+ARCH_MAP = {'simplecnn': SimpleCNN, 'resnet18': build_resnet18, 'googlenet': build_googlenet}
 
 # +
 #Load CIFAR-10 and Tiny ImageNet
@@ -169,7 +173,6 @@ def train_one_epoch(model, loader, optimizer, criterion, device):
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
-
         running_loss += loss.item()
     return running_loss / len(loader)
 
@@ -193,6 +196,31 @@ def evaluate(model, loader, criterion, device):
     avg_loss = running_loss / len(loader)
     accuracy = 100.0 * correct / total
     return avg_loss, accuracy
+
+# +
+#Plots to showcase performance 
+def plot_metrics(epochs, train_losses, val_losses, val_accuracies):
+    #Loss Curves
+    plt.figure(figsize=(10, 4))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, train_losses, label="Train Loss")
+    plt.plot(epochs, val_losses, label="Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Loss vs. Epoch")
+    plt.legend()
+    
+    #Accuracy Curve
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, val_accuracies, label="Validation Accuracy", color='green')
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy (%)")
+    plt.title("Validation Accuracy vs. Epoch")
+    plt.legend()
+    
+    plt.tight_layout()
+    plt.savefig("training_curves.png")
+    plt.show()
 
 # +
 def main():
@@ -255,24 +283,33 @@ def main():
         lrs = None
 
     # Training loop
-    best_acc = 0.0
+    train_losses = []
+    val_losses = []
+    val_accuracies = []
+    epoch_list = []
+
+    best_val_acc = 0.0
     for epoch in range(args.epochs):
         train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device)
         val_loss, val_acc = evaluate(model, test_loader, criterion, device)
+        if scheduler:
+            scheduler.step()
 
-        if lrs:
-            lrs.step() 
+        train_losses.append(train_loss)
+        val_losses.append(val_loss)
+        val_accuracies.append(val_acc)
+        epoch_list.append(epoch + 1)
 
-        if val_acc > best_acc:
-            best_acc = val_acc
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
 
-        print(f"Epoch [{epoch+1}/{args.epochs}] | "
-              f"Train Loss: {train_loss:.4f}, "
-              f"Val Loss: {val_loss:.4f}, "
-              f"Val Acc: {val_acc:.2f}% (Best: {best_acc:.2f}%)")
+        print(f"Epoch [{epoch+1}/{args.epochs}] | Train Loss: {train_loss:.4f} | "
+              f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}% (Best: {best_val_acc:.2f}%)")
 
     print("Training complete.")
-    print(f"Best Validation Accuracy: {best_acc:.2f}%")
+    print(f"Best Validation Accuracy: {best_val_acc:.2f}%")
+
+    plot_metrics(epoch_list, train_losses, val_losses, val_accuracies)
 
 if __name__ == '__main__':
     main()
