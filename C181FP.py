@@ -263,7 +263,7 @@ def main():
         batch_size=args.batch_size,
         advanced_augment=args.advanced_augment
     )
-train_loader, test_loader = tiny_loader.get_data_loaders()
+    train_loader, test_loader = tiny_loader.get_data_loaders()
     # Models
     if args.arch == 'simplecnn':
         model = SimpleCNN(num_classes=10, dropout_rate=args.dropout_rate)
