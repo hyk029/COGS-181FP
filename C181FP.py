@@ -245,6 +245,8 @@ def main():
                         help='Use CosineAnnealingLR if set')
     parser.add_argument('--advanced_augment', action='store_true',
                         help='Use RandAugment if set')
+    parser.add_argument('--weight_decay', type=float, default=1e-4,
+                    help='Weight decay (L2 regularization)')
     args, unknown = parser.parse_known_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -272,10 +274,17 @@ def main():
         criterion = nn.CrossEntropyLoss()
 
     # Optimizer
+    
+    # if args.optimizer == 'adam':
+    #     optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # else:
+    #     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
+
     if args.optimizer == 'adam':
-        optimizer = optim.Adam(model.parameters(), lr=args.lr)
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     else:
-        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+
 
     # Cosine Annealing Learning Rate scheduling
     if args.use_cosine_scheduler:
@@ -327,6 +336,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
 
 
 
