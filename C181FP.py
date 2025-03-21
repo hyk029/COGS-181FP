@@ -65,7 +65,7 @@ def build_googlenet(num_classes=10):
 # ARCH_MAP = {'simplecnn': SimpleCNN, 'resnet18': build_resnet18, 'googlenet': build_googlenet}
 
 
-# Load CIFAR-10 and Tiny ImageNet
+# Load CIFAR-10 
 def get_cifar10_loaders(batch_size=128, advanced_augment=True):
     if advanced_augment:
         train_transform = transforms.Compose([
@@ -115,51 +115,6 @@ def get_cifar10_loaders(batch_size=128, advanced_augment=True):
         num_workers=2
     )
     return train_loader, test_loader
-
-
-class TinyImageNetLoader:
-    def __init__(self, root, batch_size, advanced_augment=False, num_workers=2):
-        self.root = root
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-
-        if advanced_augment:
-            self.train_transform = transforms.Compose([
-                transforms.RandAugment(),
-                transforms.ToTensor(),
-                transforms.Normalize((0.4802, 0.4481, 0.3975),
-                                     (0.2770, 0.2691, 0.2821))
-            ])
-        else:
-            self.train_transform = transforms.Compose([
-                transforms.RandomCrop(64, padding=4),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize((0.4802, 0.4481, 0.3975),
-                                     (0.2770, 0.2691, 0.2821))
-            ])
-
-        self.val_transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.4802, 0.4481, 0.3975),
-                                 (0.2770, 0.2691, 0.2821))
-        ])
-
-    def _make_dataloader(self, folder, transform, shuffle=True):
-        dataset = ImageFolder(folder, transform=transform)
-        return DataLoader(
-            dataset,
-            batch_size=self.batch_size,
-            shuffle=shuffle,
-            num_workers=self.num_workers
-        )
-
-    def get_data_loaders(self):
-        train_folder = os.path.join(self.root, 'train')
-        val_folder = os.path.join(self.root, 'val')
-        train_loader = self._make_dataloader(train_folder, self.train_transform, shuffle=True)
-        val_loader = self._make_dataloader(val_folder, self.val_transform, shuffle=False)
-        return train_loader, val_loader
 
 # Training and Evaluating Functions
 def train_one_epoch(model, loader, optimizer, criterion, device):
@@ -223,7 +178,6 @@ def plot_metrics(epochs, train_losses, val_losses, val_accuracies):
 
 
 def main():
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--arch', type=str, default='resnet18',
                         choices=['simplecnn', 'resnet18', 'googlenet'],
@@ -253,17 +207,12 @@ def main():
     print(f"Using device: {device}")
 
     # Data loaders
-    # train_loader, test_loader = get_cifar10_loaders(
-    #     batch_size=args.batch_size,
-    #     advanced_augment=args.advanced_augment
-    # )
-
-    tiny_loader = TinyImageNetLoader(
-        root='./tiny-imagenet-200',
+    train_loader, test_loader = get_cifar10_loaders(
         batch_size=args.batch_size,
         advanced_augment=args.advanced_augment
     )
     train_loader, test_loader = tiny_loader.get_data_loaders()
+    
     # Models
     if args.arch == 'simplecnn':
         model = SimpleCNN(num_classes=10, dropout_rate=args.dropout_rate)
