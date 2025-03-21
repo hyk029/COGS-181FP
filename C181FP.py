@@ -253,11 +253,17 @@ def main():
     print(f"Using device: {device}")
 
     # Data loaders
-    train_loader, test_loader = get_cifar10_loaders(
+    # train_loader, test_loader = get_cifar10_loaders(
+    #     batch_size=args.batch_size,
+    #     advanced_augment=args.advanced_augment
+    # )
+
+    tiny_loader = TinyImageNetLoader(
+        root='./tiny-imagenet-200',
         batch_size=args.batch_size,
         advanced_augment=args.advanced_augment
     )
-
+train_loader, test_loader = tiny_loader.get_data_loaders()
     # Models
     if args.arch == 'simplecnn':
         model = SimpleCNN(num_classes=10, dropout_rate=args.dropout_rate)
