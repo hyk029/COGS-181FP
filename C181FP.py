@@ -341,7 +341,7 @@ def plot_augmentation_comparison(results, output_dir):
                 'best_val_acc': result['best_val_acc']
             })
     
-    if not data:  # Skip if no augmentation data
+    if not data:
         return
     
     df = pd.DataFrame(data)
@@ -376,7 +376,7 @@ def plot_scheduler_comparison(results, output_dir):
                 'best_val_acc': result['best_val_acc']
             })
     
-    if not data:  # Skip if no scheduler data
+    if not data:
         return
     
     df = pd.DataFrame(data)
@@ -414,11 +414,11 @@ def create_configuration_grid():
     use_scheduler = [True, False]
     augmentation = [True, False]
     
-    # Create configurations (reduced grid to keep runtime manageable)
+    # Create configurations
     base_configs = list(itertools.product(
-        architectures,     # 2 options
-        optimizers,        # 2 options
-        learning_rates,    # 2 options
+        architectures,
+        optimizers,
+        learning_rates,
     ))
     
     # Generate configurations
@@ -428,19 +428,19 @@ def create_configuration_grid():
             'architecture': arch,
             'optimizer': opt,
             'learning_rate': lr,
-            'batch_size': 128,  # default
-            'dropout_rate': 0.3 if arch == 'simplecnn' else 0.0,  # only for SimpleCNN
-            'label_smoothing': 0.0,  # default
-            'use_cosine_scheduler': False,  # default
-            'advanced_augment': False,  # default
-            'weight_decay': 1e-4,  # default
-            'epochs': 15,  # reduced for quicker experiments
+            'batch_size': 128,
+            'dropout_rate': 0.3 if arch == 'simplecnn' else 0.0,
+            'label_smoothing': 0.0,
+            'use_cosine_scheduler': False,
+            'advanced_augment': False,
+            'weight_decay': 1e-4,
+            'epochs': 15,
         }
         configurations.append(config)
         
         # Add batch size variations
         for bs in batch_sizes:
-            if bs != 128:  # Skip default
+            if bs != 128:
                 config_bs = config.copy()
                 config_bs['batch_size'] = bs
                 configurations.append(config_bs)
@@ -448,7 +448,7 @@ def create_configuration_grid():
         # Add dropout rate variation for SimpleCNN
         if arch == 'simplecnn':
             for dr in dropout_rates:
-                if dr != 0.3:  # Skip default
+                if dr != 0.3:
                     config_dr = config.copy()
                     config_dr['dropout_rate'] = dr
                     configurations.append(config_dr)
@@ -534,16 +534,11 @@ def run_experiment(config, device):
         'val_accuracies': val_accuracies,
         'best_val_acc': best_val_acc,
     })
-    
-    # Don't store model for each configuration to save space
-    # result['model_state_dict'] = model.state_dict()
-    
+
     return result
 
 def main():
-    # Set up the experiment directory
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = f"experiment_results_{timestamp}"
+    output_dir = f"experiment_results"
     os.makedirs(output_dir, exist_ok=True)
     
     # Parse command line arguments for global settings
